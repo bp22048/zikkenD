@@ -14,6 +14,7 @@ def main():
     client.armDisarm(True)
 
     client.takeoff(3)
+    #これ見えてる？
 
     return 0
 
