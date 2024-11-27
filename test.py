@@ -1,6 +1,10 @@
 import sys
 import hakosim
 
+def destination():
+    #適当なクラス
+    return 0
+
 def main():
     
     if len(sys.argv)!= 2:
@@ -14,7 +18,6 @@ def main():
     client.armDisarm(True)
 
     client.takeoff(3)
-    #これ見えてる？
 
     return 0
 
