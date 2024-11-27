@@ -1,6 +1,7 @@
 import sys
 import hakosim
 
+
 def destination():
     #適当なクラス
     return 0
