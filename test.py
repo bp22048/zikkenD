@@ -7,15 +7,9 @@ import pprint
 
 
 def destination():
-    #目的地の位置情報を取得
+    #
     
     return 0
-
-def debug_pos(client):
-    pose = client.simGetVehiclePose()
-    print(f"POS  : {pose.position.x_val} {pose.position.y_val} {pose.position.z_val}")
-    roll, pitch, yaw = hakosim.hakosim_types.Quaternionr.quaternion_to_euler(pose.orientation)
-    print(f"ANGLE: {math.degrees(roll)} {math.degrees(pitch)} {math.degrees(yaw)}")
 
 def main():
     
@@ -24,12 +18,15 @@ def main():
         return 1
         #sys.argv[0] = "..\config\custom.json"
     
+    #箱庭ドローンを走査するためのクライアントとオブジェクトを取得
     client = hakosim.MultirotorClient(sys.argv[1])
+    #クライアントオブジェクトの初期化
     client.confirmConnection()
     client.enableApiControl(True)
     client.armDisarm(True)
+    
+    #自身のプログラム
 
-    #この↓に動作を記述する
     client.takeoff(3)
 
     return 0
