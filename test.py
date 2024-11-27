@@ -1,5 +1,6 @@
 import sys
 import hakosim
+import numpy
 
 
 def destination():
