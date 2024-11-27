@@ -11,6 +11,12 @@ def destination():
     
     return 0
 
+def debug_pos(client):
+    pose = client.simGetVehiclePose()
+    print(f"POS  : {pose.position.x_val} {pose.position.y_val} {pose.position.z_val}")
+    roll, pitch, yaw = hakosim.hakosim_types.Quaternionr.quaternion_to_euler(pose.orientation)
+    print(f"ANGLE: {math.degrees(roll)} {math.degrees(pitch)} {math.degrees(yaw)}")
+
 def main():
     
     if len(sys.argv)!= 2:
@@ -23,6 +29,7 @@ def main():
     client.enableApiControl(True)
     client.armDisarm(True)
 
+    #この↓に動作を記述する
     client.takeoff(3)
 
     return 0
