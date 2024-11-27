@@ -1,10 +1,14 @@
 import sys
 import hakosim
 import numpy
+import time
+import math
+import pprint
 
 
 def destination():
-    #適当なクラス
+    #目的地の位置情報を取得
+    
     return 0
 
 def main():
