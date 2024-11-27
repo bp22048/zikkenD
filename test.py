@@ -7,7 +7,7 @@ import pprint
 
 
 def destination():
-    #48
+    #目的地の取得
     
     return 0
 
@@ -33,6 +33,12 @@ def main():
     roll, pitch, yaw = hakosim_types.Quaternionr.quaternian_to_euler(pose.orientation)
     print("ANGLE:{math.degrees(roll)} {math.degrees(pitch)}{mathdegrees(yaw)}")
     
+    #目的地の取得
+
+    #目的地へ移動　x:x軸　y:y軸　z: 高度　speed：速さ(m/s)　機首の方向: yaw_deg
+    client.moveToPosition(x,y,z=3,speed=3,yaw_deg=0)
+    
+    client.land() #着陸
 
     return 0
 
