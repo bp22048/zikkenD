@@ -26,6 +26,7 @@ def main():
     client.armDisarm(True)
     
     #自身のプログラム
+    #aaa
 
     client.takeoff(3) #離陸
     
