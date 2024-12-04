@@ -27,12 +27,15 @@ def main():
     
     #自身のプログラム
 
-    client.takeoff(3) #離陸
+    client.takeoff(10) #離陸
     
     pose = client.simGetVehiclePose() #ドローンの位置と姿勢を取得
     roll, pitch, yaw = hakosim_types.Quaternionr.quaternian_to_euler(pose.orientation)
-    print("ANGLE:{math.degrees(roll)} {math.degrees(pitch)}{mathdegrees(yaw)}")
-    
+    print("ANGLE:{math.degrees(roll)} {math.degrees(pitch)}{math.degrees(yaw)}")
+
+    client.moveToPosition(x=10,y=3,z=6,speed=10,yaw_deg=0)
+
+    client.land()
 
     return 0
 
