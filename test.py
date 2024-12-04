@@ -5,18 +5,33 @@ import time
 import math
 import pprint
 
-
+#目的地
 def destination():
-    #
+    #test
     
     return 0
+
+#目的地まで飛行
+def fly_to_destination():
+    
+    return 0
+
+#着陸
+def landing():
+    return 0
+
+def debug_pos(client):
+    pose = client.simGetVehiclePose()
+    print(f"POS  : {pose.position.x_val} {pose.position.y_val} {pose.position.z_val}")
+    roll, pitch, yaw = hakosim.hakosim_types.Quaternionr.quaternion_to_euler(pose.orientation)
+    print(f"ANGLE: {math.degrees(roll)} {math.degrees(pitch)} {math.degrees(yaw)}")
+
 
 def main():
     
     if len(sys.argv)!= 2:
         print(f"Usage:{sys.argv[0]}<config_path>")
         return 1
-        #sys.argv[0] = "..\config\custom.json"
     
     #箱庭ドローンを走査するためのクライアントとオブジェクトを取得
     client = hakosim.MultirotorClient(sys.argv[1])
@@ -27,7 +42,8 @@ def main():
     
     #自身のプログラム
 
-    client.takeoff(3)
+    client.takeoff(3) #離陸
+    
 
     return 0
 
