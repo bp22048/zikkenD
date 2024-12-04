@@ -38,6 +38,18 @@ def main():
     #目的地へ移動　x:x軸　y:y軸　z: 高度　speed：速さ(m/s)　機首の方向: yaw_deg
     client.moveToPosition(x,y,z=3,speed=3,yaw_deg=0)
     
+    #障害物検出
+    lidarData = client.getLidarData()
+    if(len(lidarData.point_cloud) < 3):
+        print("\tNo points received from Lidar data")
+    else:
+        print("len: {len(lidarData.point_cloud)}")
+    points = parse_lidarData(lidarData) #障害物情報の整形
+    print("\tReading: time_stamp: %d number_of_points: %d" %(pprint.pformat(lidarData.posse.position))) #障害物情報の出力
+    
+    
+    
+    
     client.land() #着陸
     
     
