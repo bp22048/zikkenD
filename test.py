@@ -39,6 +39,8 @@ def main():
     client.moveToPosition(x,y,z=3,speed=3,yaw_deg=0)
     
     client.land() #着陸
+    
+    
 
     return 0
 
