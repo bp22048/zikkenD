@@ -26,8 +26,24 @@ def main():
     client.armDisarm(True)
     
     #自身のプログラム
+    
+    #3m浮上
+    client.takeoff(15)
 
-    client.takeoff(3) #離陸
+    #目的地へ移動
+    client.moveToPosition(x=10,y=0,z=3,spped=3,yaw_deg=0)
+
+    #カメラ撮影
+    png_image = client.simGetImage("0",hakosim.ImageType.Scene)
+
+    #ファイルとして保存
+    if png_image:
+        with open("scene.png","wb") as f:
+            f.write(png_image)
+            
+    #着陸
+    client.land()
+    
     
     pose = client.simGetVehiclePose() #ドローンの位置と姿勢を取得
     roll, pitch, yaw = hakosim_types.Quaternionr.quaternian_to_euler(pose.orientation)
