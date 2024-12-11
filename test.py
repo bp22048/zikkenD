@@ -30,7 +30,7 @@ def debug_pos(client):
     roll, pitch, yaw = hakosim.hakosim_types.Quaternionr.quaternion_to_euler(pose.orientation)
     print(f"ANGLE: {math.degrees(roll)} {math.degrees(pitch)} {math.degrees(yaw)}")
 
-
+#BP22083
 def main():
     
     if len(sys.argv)!= 2:
@@ -48,7 +48,7 @@ def main():
 
     client.takeoff(3) #離陸
 
-    client.takeoff(3) #さらに離陸?
+    client.land #さらに離陸?
     return 0
 
 if __name__=="__main__":
