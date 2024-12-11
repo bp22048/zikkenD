@@ -46,10 +46,23 @@ def main():
     
     #自身のプログラム
 
-    client.takeoff(3) #離陸
+    #離陸
+    client.takeoff(3) 
 
-    #ドローンを目的地まで移動
+    #ドローンを目的地1まで移動
     client.moveToPosition(x=10,y=0,z=3,speed=3,yaw_deg=0)
+
+    #着陸
+    client.land()
+
+    #投票時間(今回は10秒間停止)
+    time.sleep(10)
+
+    #離陸
+    client.takeoff(3)
+
+    #ドローンを目的地2まで移動
+    client.moveToPosition(x=-5,y=-5,z=3,speed=3,yaw_deg=0)
 
     #着陸
     client.land()
