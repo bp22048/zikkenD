@@ -48,6 +48,7 @@ def main():
 
     client.takeoff(3) #離陸
 
+    client.takeoff(3) #さらに離陸?
     return 0
 
 if __name__=="__main__":
