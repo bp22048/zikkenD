@@ -48,7 +48,11 @@ def main():
 
     client.takeoff(3) #離陸
 
-    client.takeoff(3) #さらに離陸?
+    #ドローンを目的地まで移動
+    client.moveToPosition(x=10,y=0,z=3,speed=3,yaw_deg=0)
+
+    #着陸
+    client.land()
     return 0
 
 if __name__=="__main__":
