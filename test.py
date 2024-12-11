@@ -53,19 +53,23 @@ def main():
     client.moveToPosition(x=10,y=0,z=3,speed=3,yaw_deg=0)
 
     #着陸
-    client.land()
+    client.moveToPosition(x=10,y=0,z=0,speed=3,yaw_deg=0)
 
     #投票時間(今回は10秒間停止)
     time.sleep(10)
-
-    #離陸
-    client.takeoff(3)
 
     #ドローンを目的地2まで移動
     client.moveToPosition(x=-5,y=-5,z=3,speed=3,yaw_deg=0)
 
     #着陸
-    client.land()
+    client.moveToPosition(x=-5,y=-5,z=0,speed=3,yaw_deg=0)
+
+    #投票時間(今回は10秒間停止)
+    time.sleep(10)
+
+    #本部に戻る
+    client.moveToPosition(x=0,y=0,z=3,speed=5,yaw_deg=0)
+    client.moveToPosition(x=0,y=0,z=0,speed=5,yaw_deg=0)
     return 0
 
 if __name__=="__main__":
