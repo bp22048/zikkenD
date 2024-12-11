@@ -20,6 +20,10 @@ def fly_to_destination():
 def landing():
     return 0
 
+#障害物回避
+def avoidance():
+    return 0
+
 def debug_pos(client):
     pose = client.simGetVehiclePose()
     print(f"POS  : {pose.position.x_val} {pose.position.y_val} {pose.position.z_val}")
@@ -43,7 +47,6 @@ def main():
     #自身のプログラム
 
     client.takeoff(3) #離陸
-    
 
     return 0
 
