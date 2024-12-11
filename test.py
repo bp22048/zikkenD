@@ -7,9 +7,18 @@ import pprint
 
 # 目的地
 
-def destination():
-    # テスト用の目的地を返す (例: x=10, y=0, z=3)
-    return {'x': 10, 'y': 0, 'z': 3}
+def destination(index=None):
+    # 複数の目的地をリストとして定義
+    destinations = [
+        {'x': 10, 'y': 0, 'z': 3},
+        {'x': -5, 'y': -5, 'z': 3},
+        {'x': 15, 'y': 10, 'z': 3}
+    ]
+    # 指定されたインデックスの目的地を返す
+    if index is not None and 0 <= index < len(destinations):
+        return destinations[index]
+    # デフォルトで最初の目的地を返す
+    return destinations[0]
 
 # 目的地まで飛行
 def fly_to_destination(client, destination, speed, yaw_deg):
@@ -53,7 +62,7 @@ def main():
     takeoff(client, altitude=3)
 
     # 目的地1まで移動
-    dest1 = destination()
+    dest1 = destination(index=0)
     fly_to_destination(client, dest1, speed=3, yaw_deg=0)
     landing(client, dest1, speed=3, yaw_deg=0)
 
@@ -61,7 +70,7 @@ def main():
     time.sleep(10)
 
     # 目的地2まで移動
-    dest2 = {'x': -5, 'y': -5, 'z': 3}
+    dest2 = destination(index=1)
     fly_to_destination(client, dest2, speed=3, yaw_deg=0)
     landing(client, dest2, speed=3, yaw_deg=0)
 
@@ -69,7 +78,7 @@ def main():
     time.sleep(10)
 
     # 本部に戻る
-    home = {'x': 0, 'y': 0, 'z': 3}
+    home = destination(index=2)
     fly_to_destination(client, home, speed=5, yaw_deg=0)
     landing(client, home, speed=5, yaw_deg=0)
 
