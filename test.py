@@ -11,6 +11,28 @@ def destination():
     
     return 0
 
+def moveToDestination(client, x, y, z, speed = 3):
+    #障害物検出
+    lidarData = client.getLidarData()
+    #points = parse_lidarData(lidarData) #障害物情報の整形
+    #print("\tReading: time_stamp: %d number_of_points: %d" %(pprint.pformat(lidarData.pose.position))) #障害物情報の出力
+    if not lidarData.point_cloud:
+        print("\tNo points received from Lidar data")
+        # 基準の高さへ移動
+        client.moveToPositionAsync(x, y, z ,speed ,yaw_deg=0).join()
+    else:
+        print(f"Obstacle detected: {len(lidarData.point_cloud)} points")
+        # 障害物の回避ロジック
+        clearance_z = z
+        while len(lidarData.point_cloud) >= 3:  # 障害物が存在する間
+            clearance_z += 1  # 高度を1mずつ上げる
+            print(f"Raising altitude to avoid obstacle: {clearance_z}")
+            client.moveToPositionAsync(x, y, clearance_z, speed).join()
+            lidarData = client.getLidarData()  # 最新のLiDARデータを取得
+        
+        print("Obstacle avoided, resuming normal movement.")
+        client.moveToPositionAsync(x, y, clearance_z, speed).join()
+
 def main():
     
     if len(sys.argv)!= 2:
@@ -30,22 +52,17 @@ def main():
     client.takeoff(3) #離陸
     
     pose = client.simGetVehiclePose() #ドローンの位置と姿勢を取得
-    roll, pitch, yaw = hakosim_types.Quaternionr.quaternian_to_euler(pose.orientation)
+    ##roll, pitch, yaw = hakosim_types.Quaternionr.quaternian_to_euler(pose.orientation)
     print("ANGLE:{math.degrees(roll)} {math.degrees(pitch)}{mathdegrees(yaw)}")
     
     #目的地の取得
+    
 
     #目的地へ移動　x:x軸　y:y軸　z: 高度　speed：速さ(m/s)　機首の方向: yaw_deg
-    client.moveToPosition(x,y,z=3,speed=3,yaw_deg=0)
+    x=10,y=10,z=3
+    moveToDestination(client, x, y, z)
     
-    #障害物検出
-    lidarData = client.getLidarData()
-    if(len(lidarData.point_cloud) < 3):
-        print("\tNo points received from Lidar data")
-    else:
-        print("len: {len(lidarData.point_cloud)}")
-    points = parse_lidarData(lidarData) #障害物情報の整形
-    print("\tReading: time_stamp: %d number_of_points: %d" %(pprint.pformat(lidarData.posse.position))) #障害物情報の出力
+    
     
     
     
