@@ -59,7 +59,7 @@ def main():
     
 
     #目的地へ移動　x:x軸　y:y軸　z: 高度　speed：速さ(m/s)　機首の方向: yaw_deg
-    x=10,y=10,z=3
+    x==10,y==10,z==3
     moveToDestination(client, x, y, z)
     
     
