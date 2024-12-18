@@ -11,7 +11,7 @@ def destination():
     
     return 0
 
-def moveToDestination(client, x, y, z, speed = 3):
+def moveToDestination(client, x, y, z, speed = 5):
     #障害物検出
     lidarData = client.getLidarData()
     #points = parse_lidarData(lidarData) #障害物情報の整形
@@ -27,11 +27,11 @@ def moveToDestination(client, x, y, z, speed = 3):
         while len(lidarData.point_cloud) >= 3:  # 障害物が存在する間
             clearance_z += 1  # 高度を1mずつ上げる
             print(f"Raising altitude to avoid obstacle: {clearance_z}")
-            client.moveToPositionAsync(x, y, clearance_z, speed).join()
+            client.moveToPosition(x, y, clearance_z, speed)
             lidarData = client.getLidarData()  # 最新のLiDARデータを取得
         
         print("Obstacle avoided, resuming normal movement.")
-        client.moveToPositionAsync(x, y, clearance_z, speed).join()
+        client.moveToPosition(x, y, z, speed)
 
 def main():
     
@@ -59,7 +59,7 @@ def main():
     
 
     #目的地へ移動　x:x軸　y:y軸　z: 高度　speed：速さ(m/s)　機首の方向: yaw_deg
-    x==10,y==10,z==3
+    x,y,z = 50,0,3
     moveToDestination(client, x, y, z)
     
     
