@@ -88,13 +88,15 @@ def main():
     #目的地へ移動　x:x軸　y:y軸　z: 高度　speed：速さ(m/s)　機首の方向: yaw_deg
     x, y, z = 20, 0, 3
     moveToDestination(client, x, y, z)
+    time.sleep(3)
 
     x, y, z = 50, 0, 20 
     moveToDestination(client, x, y, z)
+    time.sleep(5)
 
     x, y, z = 0, 0, 20
-    clint.moveToPosition(client, x, y, z,speed = 10)
-    
+    client.moveToPosition(x, y, z,speed = 5)
+    time.sleep(5)
     
 
     
