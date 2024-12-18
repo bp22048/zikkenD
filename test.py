@@ -102,18 +102,6 @@ def keyboard_control(client: hakosim.MultirotorClient):
         pygame.quit()
     return 0
 
-# キーボードセット
-def keyboard(client):
-    pygame.init()
-    
-    # connect to the HakoSim simulator
-    client.default_drone_name = "DroneTransporter"
-    client.confirmConnection()
-    client.enableApiControl(True)
-    client.armDisarm(True)
-    keyboard_control(client)
-    return 0
-
 # デバッグ用: ドローンの現在位置と姿勢を表示
 def debug_pos(client):
     pose = client.simGetVehiclePose()
