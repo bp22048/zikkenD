@@ -5,6 +5,7 @@ import time
 import math
 import pprint
 import pygame
+import multiprocessing
 from pygame.locals import *
 
 # 目的地
@@ -12,7 +13,7 @@ from pygame.locals import *
 def destination(index=None):
     # 複数の目的地をリストとして定義
     destinations = [
-        {'x': 10, 'y': 0, 'z': 3},
+        {'x': 50, 'y': 0, 'z': 3},
         {'x': -5, 'y': -5, 'z': 3},
         {'x': 15, 'y': 10, 'z': 3}
     ]
@@ -23,7 +24,7 @@ def destination(index=None):
     return destinations[0]
 
 # 目的地まで飛行
-def fly_to_destination(client, destination, speed, yaw_deg):
+def fly_to_destination(client, destination, speed, yaw_deg,event):
     client.moveToPosition(x=destination['x'], y=destination['y'], z=destination['z'], speed=speed, yaw_deg=yaw_deg)
 
 # 着陸
@@ -31,8 +32,60 @@ def landing(client, position, speed, yaw_deg):
     client.moveToPosition(x=position['x'], y=position['y'], z=0, speed=speed, yaw_deg=yaw_deg)
 
 # 障害物回避
-def avoidance():
+def avoidance(event):
+
     return 0
+
+def search_block(points):
+
+    return 0
+
+def moveToDestination(client, x, y, z, speed=8):
+    """
+    指定した目的地に移動する関数。LiDARを使用して障害物を検知し、
+    必要に応じて回避行動を取る。
+    
+    Parameters:
+    - client: hakosimのクライアントオブジェクト
+    - x, y, z: 移動先の座標
+    - speed: 移動速度 (m/s)
+    """
+    max_altitude = 20  # 最大高度を10mに制限
+    clearance_z = z    # 初期高度を指定されたz値に設定
+    
+    # LiDARデータを取得
+    lidarData = client.getLidarData()
+    
+    if not lidarData.point_cloud:
+        print("\tNo points received from LiDAR. Moving to target position.")
+        # LiDARがデータを返さない場合、指定位置に移動
+        client.moveToPosition(x, y, clearance_z, speed)
+        pass
+    
+    # LiDARデータを (x, y, z) に整形
+    points = numpy.array(lidarData.point_cloud).reshape(-1, 3)
+    distances = numpy.sqrt(points[:, 0]**2 + points[:, 1]**2 + points[:, 2]**2)  # 各点の距離を計算
+    
+    # 距離が7m未満の障害物を検出
+    close_obstacles = distances[distances<7.0]
+
+    #print(close_obstacles)
+    
+    if len(close_obstacles) > 0:
+        print(f"Obstacle detected: {len(close_obstacles)} points within 7m.")
+        
+        # 高度を5mずつ上げて回避する。ただし、最大高度を超えないようにする
+        if clearance_z < max_altitude:
+            point = debug_pos(client)
+            clearance_z = point['z'] + 5
+            print(f"Raising altitude to avoid obstacle: {clearance_z}")
+            client.moveToPosition(point['x'], point['y'], clearance_z, speed)
+            moveToDestination(client,x,y,clearance_z,speed)
+        else:
+            print("Reached maximum altitude.")
+    else:
+        print("No close obstacles detected. Moving to target position.")
+        client.moveToPosition(x, y, clearance_z, speed)
 
 def parse_lidarData(data):
     #reshape array of floats to array of[X,Y,Z]
@@ -89,7 +142,16 @@ def keyboard_control(client: hakosim.MultirotorClient):
                         destination['y'] *= -1
                         fly_to_destination(client,destination,speed=5,yaw_deg=5)
                     if event.key == K_LEFT:
-                        print("W")
+                        lidarData = client.getLidarData()
+                        if (len(lidarData.point_cloud)<3):
+                            print("NO")
+                        else:
+                            print(f"len: {len(lidarData.point_cloud)}")
+                        points = parse_lidarData(lidarData)
+                        print("\tReading:time_stamp: %d number_of_points: %d"% (lidarData.time_stamp, len(points)))
+                        print(points)
+                        distances = numpy.sqrt(points[:, 0]**2 + points[:, 1]**2 + points[:, 2]**2)  # 各点の距離を計算
+                        print(distances)
                     if event.key == K_RIGHT:
                         print("W")
                     if event.key == K_f:
@@ -141,13 +203,23 @@ def main():
         print(f"len: {len(lidarData.point_cloud)}")
     points = parse_lidarData(lidarData)
     print("\tReading:time_stamp: %d number_of_points: %d"% (lidarData.time_stamp, len(points)))
-    '''    
+    '''   
+
+    keyboard_control(client) 
 
     # 目的地1まで移動
     dest1 = destination(index=0)
-    fly_to_destination(client, dest1, speed=3, yaw_deg=0)
+    avoid = multiprocessing.Process(target=avoidance)
+    fly = multiprocessing.Process(target=fly_to_destination, args=(client, dest1,3,0))
+    avoid.start()
+    fly.start()
+
+    avoid.join()
+    fly.join()
+    #moveToDestination(client,dest1['x'],dest1['y'],dest1['z'])
+    #fly_to_destination(client, dest1, speed=3, yaw_deg=0)
     landing(client, dest1, speed=3, yaw_deg=0)
-    keyboard_control(client)
+    
 
     # 投票時間 (10秒間停止)
     time.sleep(10)
