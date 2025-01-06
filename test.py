@@ -5,8 +5,6 @@ import time
 import math
 import pprint
 import pygame
-import multiprocessing
-
 from pygame.locals import *
 
 # 目的地
@@ -16,7 +14,7 @@ def destination(index=None):
     destinations = [
         {'x': 50, 'y': 0, 'z': 3},
         {'x': -5, 'y': -5, 'z': 3},
-        {'x': 15, 'y': 10, 'z': 3}
+        {'x': 15, 'y': -10, 'z': 3}
     ]
     # 指定されたインデックスの目的地を返す
     if index is not None and 0 <= index < len(destinations):
@@ -25,17 +23,13 @@ def destination(index=None):
     return destinations[0]
 
 # 目的地まで飛行
-def fly_to_destination(client, destination, speed, yaw_deg,event):
-    client.moveToPosition(x=destination['x'], y=destination['y'], z=destination['z'], speed=speed, yaw_deg=yaw_deg)
-    event.set()
+def fly_to_destination(client, destination, speed, yaw_deg):
 
-# 着陸
-def landing(client, position, speed, yaw_deg):
-    client.moveToPosition(x=position['x'], y=position['y'], z=0, speed=speed, yaw_deg=yaw_deg)
+    client.moveToPosition(x=destination['x'], y=destination['y'], z=destination['z'], speed=speed, yaw_deg=yaw_deg)
 
 # 障害物回避
 def avoidance(client):
-    #while not event.is_set():
+    
     lidarData = client.getLidarData()
     if (len(lidarData.point_cloud)<3):
         print("NO")
@@ -113,6 +107,47 @@ def parse_lidarData(data):
     points = numpy.reshape(points, (int(points.shape[0]/3),3))
     return points
 
+def motor_onoff(client):
+    data = client.getGameJoystickData()
+    data['button'] = list(data['button'])
+    data['button'][0] = True
+    client.putGameJoystickData(data)
+    time.sleep(1)
+    data['button'][0] = False
+    client.putGameJoystickData(data)
+
+def drone_control(client,data,axis):
+    data['axis'] = list(data['axis'])
+    data['axis'] = axis
+    return data
+
+def drone_angle(client,dist):
+    drone_pos = debug_pos(client)
+    angle = calculate_angle(drone_pos['x'],drone_pos['y'],dist['x'],dist['y'])
+    if angle > 170:
+        while(not(angle-10 < drone_pos['yaw'] < -180+(angle-170))):
+            pass
+    return 0
+
+def calculate_angle(current_x, current_y, target_x, target_y):
+    """
+    現在位置と目標位置から、目標に正対するための角度を計算する。
+    
+    :param current_x: 現在のx座標
+    :param current_y: 現在のy座標
+    :param target_x: 目標のx座標
+    :param target_y: 目標のy座標
+    :return: 目標への角度（ラジアン）
+    """
+    # x, yの差分を計算
+    delta_x = target_x - current_x
+    delta_y = target_y - current_y
+    
+    # atan2で角度を計算
+    angle = math.atan2(delta_y, delta_x)
+    angle_in_degrees = math.degrees(angle)
+    return angle_in_degrees*-1
+
 # キーボード操作
 def keyboard_control(client: hakosim.MultirotorClient): 
     pygame.init()
@@ -121,49 +156,40 @@ def keyboard_control(client: hakosim.MultirotorClient):
     try:
         while True:
             pygame.display.set_mode((100, 100))
+            data = client.getGameJoystickData()
             for event in pygame.event.get():
                 if event.type == pygame.KEYDOWN:
-                
+                    if event.key == K_e:
+                        motor_onoff(client)
                     if event.key == K_w:
                         print("front")
-                        destination['x'] += 1
-                        destination['y'] *= -1
-                        fly_to_destination(client,destination,speed=5,yaw_deg=5)
-                        #print('CUBIC AXIS VALUE:',data['axis'][event.axis])
+                        data = drone_control(client,data,[0.0, 0.0, 0.0, -1.0])
                     if event.key == K_s:
                         print("back")
-                        destination['x'] -= 1
-                        destination['y'] *= -1
-                        fly_to_destination(client,destination,speed=5,yaw_deg=5)
+                        data = drone_control(client,data,[0.0, 0.0, 0.0, 1.0])
                     if event.key == K_a:
                         print("left")
-                        destination['y'] += 1
-                        destination['y'] *= -1
-                        fly_to_destination(client,destination,speed=5,yaw_deg=5)
+                        data = drone_control(client,data,[0.0, 0.0, -1.0, 0.0])
                     if event.key == K_d:
                         print("right")
-                        destination['y'] -= 1
-                        destination['y'] *= -1
-                        fly_to_destination(client,destination,speed=5,yaw_deg=5)
-                    if event.key == K_g:
-                        client.takeoff(3)
+                        data = drone_control(client,data,[0.0, 0.0, 1.0, 0.0])
                     # up down
-                    if event.key == K_e:
-                        client.takeoff(3)
-                    if event.key == K_r:
-                        client.land()
                     if event.key == K_UP:
                         print("up")
-                        destination['z'] += 1
-                        destination['y'] *= -1
-                        fly_to_destination(client,destination,speed=5,yaw_deg=5)
-                            #print('CUBIC AXIS VALUE:',data['axis'][event.axis])
+                        data = drone_control(client,data,[0.0, -1.0, 0.0, 0.0])
                     if event.key == K_DOWN:
                         print("down")
-                        destination['z'] -= 1
-                        destination['y'] *= -1
-                        fly_to_destination(client,destination,speed=5,yaw_deg=5)
+                        data = drone_control(client,data,[0.0, 1.0, 0.0, 0.0])
+                    if event.key == K_b:
+                        print("stop")
+                        data = drone_control(client,data,[0.0, 0.0, 0.0, 0.0])
                     if event.key == K_LEFT:
+                        print("yaw_left")
+                        data = drone_control(client,data,[-1.0, 0.0, 0.0, 0.0])
+                    if event.key == K_RIGHT:
+                        print("yaw_right")
+                        data = drone_control(client,data,[1.0, 0.0, 0.0, 0.0])
+                    if event.key == K_x:
                         lidarData = client.getLidarData()
                         if (len(lidarData.point_cloud)<3):
                             print("NO")
@@ -174,13 +200,11 @@ def keyboard_control(client: hakosim.MultirotorClient):
                         print(points)
                         distances = numpy.sqrt(points[:, 0]**2 + points[:, 1]**2 + points[:, 2]**2)  # 各点の距離を計算
                         print(distances)
-                    if event.key == K_RIGHT:
-                        print("W")
                     if event.key == K_f:
                         pygame.quit()
                         return 0
                     destination = debug_pos(client)
-            #print("k")
+            client.putGameJoystickData(data)
     except KeyboardInterrupt:
         # Ctrl+Cが押されたときにジョイスティックをクリーンアップ
         pygame.quit()
@@ -192,18 +216,8 @@ def debug_pos(client):
     print(f"POS : {pose.position.x_val} {pose.position.y_val} {pose.position.z_val}")
     roll, pitch, yaw = hakosim.hakosim_types.Quaternionr.quaternion_to_euler(pose.orientation)
     print(f"ANGLE: {math.degrees(roll)} {math.degrees(pitch)} {math.degrees(yaw)}")
-    destination = {'x': pose.position.x_val, 'y': pose.position.y_val, 'z': pose.position.z_val}
+    destination = {'x': pose.position.x_val, 'y': pose.position.y_val, 'z': pose.position.z_val, 'yaw': math.degrees(yaw)}
     return destination
-
-# 離陸処理
-def takeoff(client, altitude):
-    client.takeoff(altitude)
-
-def average_axis(history, new_value, history_length=5):
-    history.append(new_value)
-    if len(history) > history_length:
-        history.pop(0)
-    return sum(history) / len(history)
 
 # プログラムのメイン処理
 def main():
@@ -219,12 +233,21 @@ def main():
     client.confirmConnection()
     client.enableApiControl(True)
     client.armDisarm(True)
-    event = multiprocessing.Event()
-    axis_history = {0: [], 1: [], 2: [], 3: []} 
-
     # 離陸
+    # 左回りに0~180,-180~0
+    client.takeoff(3)
+
+    dist3 = destination(index=2)
+    desti = debug_pos(client)
+    angle = calculate_angle(desti['x'],desti['y'],dist3['x'],dist3['y'])
+
 
     
+    client.moveToPosition(dist3['x'],dist3['y'],dist3['z'],3)
+
+    #keyboard_control(client)
+
+    print("end")
     
     lidarData = client.getLidarData()
     if (len(lidarData.point_cloud)<3):
@@ -235,38 +258,11 @@ def main():
     print("\tReading:time_stamp: %d number_of_points: %d"% (lidarData.time_stamp, len(points)))
        
 
-    #keyboard_control(client) 
+    
 
     # 目的地1まで移動
     dest1 = destination(index=0)
-    #fly = multiprocessing.Process(target=fly_to_destination, args=(client, dest1,3,0,event))
-    #avoid = multiprocessing.Process(target=avoidance,args=(client,event))
-    while(0): avoidance(client)
-    #fly.start()
-    #avoid.start()
-
-    #fly.join()
-    #avoid.join()
-    #moveToDestination(client,dest1['x'],dest1['y'],dest1['z'])
-    #fly_to_destination(client, dest1, speed=3, yaw_deg=0)
-    landing(client, dest1, speed=3, yaw_deg=0)
     
-
-    # 投票時間 (10秒間停止)
-    time.sleep(10)
-
-    # 目的地2まで移動
-    dest2 = destination(index=1)
-    fly_to_destination(client, dest2, speed=3, yaw_deg=0)
-    landing(client, dest2, speed=3, yaw_deg=0)
-
-    # 投票時間 (10秒間停止)
-    time.sleep(10)
-
-    # 本部に戻る
-    home = destination(index=2)
-    fly_to_destination(client, home, speed=5, yaw_deg=0)
-    landing(client, home, speed=5, yaw_deg=0)
 
     return 0
 
