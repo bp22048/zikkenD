@@ -6,6 +6,7 @@ import math
 import pprint
 import pygame
 import multiprocessing
+
 from pygame.locals import *
 
 # 目的地
@@ -26,14 +27,33 @@ def destination(index=None):
 # 目的地まで飛行
 def fly_to_destination(client, destination, speed, yaw_deg,event):
     client.moveToPosition(x=destination['x'], y=destination['y'], z=destination['z'], speed=speed, yaw_deg=yaw_deg)
+    event.set()
 
 # 着陸
 def landing(client, position, speed, yaw_deg):
     client.moveToPosition(x=position['x'], y=position['y'], z=0, speed=speed, yaw_deg=yaw_deg)
 
 # 障害物回避
-def avoidance(event):
-
+def avoidance(client):
+    #while not event.is_set():
+    lidarData = client.getLidarData()
+    if (len(lidarData.point_cloud)<3):
+        print("NO")
+    else:
+        print(f"len: {len(lidarData.point_cloud)}")
+    points = parse_lidarData(lidarData)
+    print("\tReading:time_stamp: %d number_of_points: %d"% (lidarData.time_stamp, len(points)))
+    print(points)
+    distances = numpy.sqrt(points[:, 0]**2 + points[:, 1]**2 + points[:, 2]**2)  # 各点の距離を計算
+    close_obstacles = distances[distances<7.0]
+    if len(close_obstacles) > 0:
+        print(f"Obstacle detected: {len(close_obstacles)} points within 7m.")
+        destination = debug_pos(client)
+        destination['z'] += 5
+        destination['y'] *= -1
+        fly_to_destination(client,destination,speed=5,yaw_deg=5)
+    else:
+        print("No close obstacles detected. Moving to target position.")
     return 0
 
 def search_block(points):
@@ -125,6 +145,8 @@ def keyboard_control(client: hakosim.MultirotorClient):
                         destination['y'] -= 1
                         destination['y'] *= -1
                         fly_to_destination(client,destination,speed=5,yaw_deg=5)
+                    if event.key == K_g:
+                        client.takeoff(3)
                     # up down
                     if event.key == K_e:
                         client.takeoff(3)
@@ -177,6 +199,12 @@ def debug_pos(client):
 def takeoff(client, altitude):
     client.takeoff(altitude)
 
+def average_axis(history, new_value, history_length=5):
+    history.append(new_value)
+    if len(history) > history_length:
+        history.pop(0)
+    return sum(history) / len(history)
+
 # プログラムのメイン処理
 def main():
     # 引数チェック
@@ -186,16 +214,18 @@ def main():
 
     # 箱庭ドローンを走査するためのクライアントとオブジェクトを取得
     client = hakosim.MultirotorClient(sys.argv[1])
-    
+    #pygame.init()
     # クライアントオブジェクトの初期化
     client.confirmConnection()
     client.enableApiControl(True)
     client.armDisarm(True)
+    event = multiprocessing.Event()
+    axis_history = {0: [], 1: [], 2: [], 3: []} 
 
     # 離陸
-    takeoff(client, altitude=3)
 
-    '''
+    
+    
     lidarData = client.getLidarData()
     if (len(lidarData.point_cloud)<3):
         print("NO")
@@ -203,19 +233,20 @@ def main():
         print(f"len: {len(lidarData.point_cloud)}")
     points = parse_lidarData(lidarData)
     print("\tReading:time_stamp: %d number_of_points: %d"% (lidarData.time_stamp, len(points)))
-    '''   
+       
 
-    keyboard_control(client) 
+    #keyboard_control(client) 
 
     # 目的地1まで移動
     dest1 = destination(index=0)
-    avoid = multiprocessing.Process(target=avoidance)
-    fly = multiprocessing.Process(target=fly_to_destination, args=(client, dest1,3,0))
-    avoid.start()
-    fly.start()
+    #fly = multiprocessing.Process(target=fly_to_destination, args=(client, dest1,3,0,event))
+    #avoid = multiprocessing.Process(target=avoidance,args=(client,event))
+    while(0): avoidance(client)
+    #fly.start()
+    #avoid.start()
 
-    avoid.join()
-    fly.join()
+    #fly.join()
+    #avoid.join()
     #moveToDestination(client,dest1['x'],dest1['y'],dest1['z'])
     #fly_to_destination(client, dest1, speed=3, yaw_deg=0)
     landing(client, dest1, speed=3, yaw_deg=0)
