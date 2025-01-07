@@ -14,7 +14,8 @@ def destination(index=None):
     destinations = [
         {'x': 50, 'y': 0, 'z': 3},
         {'x': -5, 'y': -5, 'z': 3},
-        {'x': 15, 'y': -10, 'z': 3}
+        {'x': 15, 'y': 10, 'z': 3},
+        {'x': 3, 'y': 0, 'z': 3}
     ]
     # 指定されたインデックスの目的地を返す
     if index is not None and 0 <= index < len(destinations):
@@ -116,9 +117,11 @@ def motor_onoff(client):
     data['button'][0] = False
     client.putGameJoystickData(data)
 
-def drone_control(client,data,axis):
+def drone_control(client,axis):
+    data = client.getGameJoystickData()
     data['axis'] = list(data['axis'])
     data['axis'] = axis
+    client.putGameJoystickData(data)
     return data
 
 def drone_angle(client,dist):
@@ -148,6 +151,24 @@ def calculate_angle(current_x, current_y, target_x, target_y):
     angle_in_degrees = math.degrees(angle)
     return angle_in_degrees*-1
 
+def calculate_axis(current_x, current_y, target_x, target_y, weight=1):
+    delta_x = target_x - current_x
+    delta_y = target_y - current_y
+    bigger = max(abs(delta_x),abs(delta_y))
+    if (bigger!=delta_x)and(bigger!=delta_y):
+        bigger = -1
+    print("delta_y = ",delta_y,"delta_x = ",delta_x)
+    #bigger *= weight
+    l_r = -(delta_y/bigger)
+    f_b = -(delta_x/bigger)
+    print(l_r,",",f_b)
+    if (abs(delta_y) < 1)and(abs(delta_x) < 1):
+        axis = [0.0, 0.0, 0.0, 0.0]
+    else :
+        axis = [0.0, 0.0, l_r, f_b]
+    print("axis = ",axis)
+    return axis
+
 # キーボード操作
 def keyboard_control(client: hakosim.MultirotorClient): 
     pygame.init()
@@ -156,39 +177,39 @@ def keyboard_control(client: hakosim.MultirotorClient):
     try:
         while True:
             pygame.display.set_mode((100, 100))
-            data = client.getGameJoystickData()
+            
             for event in pygame.event.get():
                 if event.type == pygame.KEYDOWN:
                     if event.key == K_e:
                         motor_onoff(client)
                     if event.key == K_w:
                         print("front")
-                        data = drone_control(client,data,[0.0, 0.0, 0.0, -1.0])
+                        data = drone_control(client,[0.0, 0.0, 0.0, -1.0])
                     if event.key == K_s:
                         print("back")
-                        data = drone_control(client,data,[0.0, 0.0, 0.0, 1.0])
+                        data = drone_control(client,[0.0, 0.0, 0.0, 1.0])
                     if event.key == K_a:
                         print("left")
-                        data = drone_control(client,data,[0.0, 0.0, -1.0, 0.0])
+                        data = drone_control(client,[0.0, 0.0, -1.0, 0.0])
                     if event.key == K_d:
                         print("right")
-                        data = drone_control(client,data,[0.0, 0.0, 1.0, 0.0])
+                        data = drone_control(client,[0.0, 0.0, 1.0, 0.0])
                     # up down
                     if event.key == K_UP:
                         print("up")
-                        data = drone_control(client,data,[0.0, -1.0, 0.0, 0.0])
+                        data = drone_control(client,[0.0, -1.0, 0.0, 0.0])
                     if event.key == K_DOWN:
                         print("down")
-                        data = drone_control(client,data,[0.0, 1.0, 0.0, 0.0])
+                        data = drone_control(client,[0.0, 1.0, 0.0, 0.0])
                     if event.key == K_b:
                         print("stop")
-                        data = drone_control(client,data,[0.0, 0.0, 0.0, 0.0])
+                        data = drone_control(client,[0.0, 0.0, 0.0, 0.0])
                     if event.key == K_LEFT:
                         print("yaw_left")
-                        data = drone_control(client,data,[-1.0, 0.0, 0.0, 0.0])
+                        data = drone_control(client,[-1.0, 0.0, 0.0, 0.0])
                     if event.key == K_RIGHT:
                         print("yaw_right")
-                        data = drone_control(client,data,[1.0, 0.0, 0.0, 0.0])
+                        data = drone_control(client,[1.0, 0.0, 0.0, 0.0])
                     if event.key == K_x:
                         lidarData = client.getLidarData()
                         if (len(lidarData.point_cloud)<3):
@@ -204,7 +225,10 @@ def keyboard_control(client: hakosim.MultirotorClient):
                         pygame.quit()
                         return 0
                     destination = debug_pos(client)
-            client.putGameJoystickData(data)
+                if event.type == pygame.KEYUP:
+                    if event.key == (K_w)or(K_s)or(K_a)or(K_d)or(K_UP)or(K_DOWN)or(K_LEFT)or(K_RIGHT):
+                        data = drone_control(client,[0.0, 0.0, 0.0, 0.0])
+            
     except KeyboardInterrupt:
         # Ctrl+Cが押されたときにジョイスティックをクリーンアップ
         pygame.quit()
@@ -213,9 +237,9 @@ def keyboard_control(client: hakosim.MultirotorClient):
 # デバッグ用: ドローンの現在位置と姿勢を表示
 def debug_pos(client):
     pose = client.simGetVehiclePose()
-    print(f"POS : {pose.position.x_val} {pose.position.y_val} {pose.position.z_val}")
+    #print(f"POS : {pose.position.x_val} {pose.position.y_val} {pose.position.z_val}")
     roll, pitch, yaw = hakosim.hakosim_types.Quaternionr.quaternion_to_euler(pose.orientation)
-    print(f"ANGLE: {math.degrees(roll)} {math.degrees(pitch)} {math.degrees(yaw)}")
+    #print(f"ANGLE: {math.degrees(roll)} {math.degrees(pitch)} {math.degrees(yaw)}")
     destination = {'x': pose.position.x_val, 'y': pose.position.y_val, 'z': pose.position.z_val, 'yaw': math.degrees(yaw)}
     return destination
 
@@ -235,17 +259,51 @@ def main():
     client.armDisarm(True)
     # 離陸
     # 左回りに0~180,-180~0
-    client.takeoff(3)
+    #client.takeoff(3)
 
-    dist3 = destination(index=2)
-    desti = debug_pos(client)
-    angle = calculate_angle(desti['x'],desti['y'],dist3['x'],dist3['y'])
+    keyboard_control(client)
+    #'''
+    motor_onoff(client)
+    drone_control(client,[0.0, -1.0, 0.0, 0.0])
+    time.sleep(1)
+    drone_control(client,[0.0, 0.0, 0.0, 0.0])
+    #'''
 
+    dist = destination(index=2)
+    drone_pos = debug_pos(client)
+    axis = calculate_axis(round(drone_pos['x'],3),round(drone_pos['y'],3),dist['x'],dist['y'])
+    flag = True
+    while flag:
+        if axis != [0.0, 0.0, 0.0, 0.0]:
+            drone_pos = debug_pos(client)
+            axis = calculate_axis(round(drone_pos['x'],3),round(drone_pos['y'],3),dist['x'],dist['y'])
+            drone_control(client,axis)
+            time.sleep(1)
+        else: flag = False
+    time.sleep(5)
+    drone_pos = debug_pos(client)
+    delta_x = round(drone_pos['x'],3) - dist['x']
+    delta_y = round(drone_pos['y'],3) - dist['y']
+    print("誤差:x=",delta_x,",y=",delta_y)
 
+    flag = True
+    axis = calculate_axis(round(drone_pos['x'],3),round(drone_pos['y'],3),dist['x'],dist['y'])
+    while flag:
+        if axis != [0.0, 0.0, 0.0, 0.0]:
+            drone_pos = debug_pos(client)
+            axis = calculate_axis(round(drone_pos['x'],3),round(drone_pos['y'],3),dist['x'],dist['y'])
+            drone_control(client,axis)
+            time.sleep(1)
+        else: flag = False
+    time.sleep(5)
+    drone_pos = debug_pos(client)
+    delta_x = round(drone_pos['x'],3) - dist['x']
+    delta_y = round(drone_pos['y'],3) - dist['y']
+    print("誤差:x=",delta_x,",y=",delta_y)
+
+    #angle = calculate_angle(desti['x'],desti['y'],dist3['x'],dist3['y'])
     
-    client.moveToPosition(dist3['x'],dist3['y'],dist3['z'],3)
-
-    #keyboard_control(client)
+    #client.moveToPosition(dist3['x'],dist3['y'],dist3['z'],3)
 
     print("end")
     
