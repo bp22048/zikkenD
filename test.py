@@ -23,84 +23,40 @@ def destination(index=None):
     # デフォルトで最初の目的地を返す
     return destinations[0]
 
-# 目的地まで飛行
-def fly_to_destination(client, destination, speed, yaw_deg):
-
-    client.moveToPosition(x=destination['x'], y=destination['y'], z=destination['z'], speed=speed, yaw_deg=yaw_deg)
+def fly_to_destination(client,dist):
+    drone_pos = debug_pos(client)
+    axis = calculate_axis(round(drone_pos['x'],3),round(drone_pos['y'],3),dist['x'],dist['y'])
+    while axis != [0.0, 0.0, 0.0, 0.0]:
+        drone_pos = debug_pos(client)
+        axis = calculate_axis(round(drone_pos['x'],3),round(drone_pos['y'],3),dist['x'],dist['y'])
+        axis = avoidance(client,axis)
+        drone_control(client,axis)
+        #time.sleep(1)
+    time.sleep(5)
+    drone_pos = debug_pos(client)
+    delta_x = round(drone_pos['x'],3) - dist['x']
+    delta_y = round(drone_pos['y'],3) - dist['y']
+    print("誤差:x=",delta_x,",y=",delta_y)
 
 # 障害物回避
-def avoidance(client):
+def avoidance(client,axis):
     
     lidarData = client.getLidarData()
-    if (len(lidarData.point_cloud)<3):
-        print("NO")
-    else:
-        print(f"len: {len(lidarData.point_cloud)}")
+    #if (len(lidarData.point_cloud)<3):
+    #    print("NO")
+    #else:
+        #print(f"len: {len(lidarData.point_cloud)}")
     points = parse_lidarData(lidarData)
-    print("\tReading:time_stamp: %d number_of_points: %d"% (lidarData.time_stamp, len(points)))
-    print(points)
+    #print("\tReading:time_stamp: %d number_of_points: %d"% (lidarData.time_stamp, len(points)))
+    #print(points)
     distances = numpy.sqrt(points[:, 0]**2 + points[:, 1]**2 + points[:, 2]**2)  # 各点の距離を計算
-    close_obstacles = distances[distances<7.0]
+    close_obstacles = distances[distances<9.0]
     if len(close_obstacles) > 0:
-        print(f"Obstacle detected: {len(close_obstacles)} points within 7m.")
-        destination = debug_pos(client)
-        destination['z'] += 5
-        destination['y'] *= -1
-        fly_to_destination(client,destination,speed=5,yaw_deg=5)
-    else:
-        print("No close obstacles detected. Moving to target position.")
-    return 0
-
-def search_block(points):
-
-    return 0
-
-def moveToDestination(client, x, y, z, speed=8):
-    """
-    指定した目的地に移動する関数。LiDARを使用して障害物を検知し、
-    必要に応じて回避行動を取る。
-    
-    Parameters:
-    - client: hakosimのクライアントオブジェクト
-    - x, y, z: 移動先の座標
-    - speed: 移動速度 (m/s)
-    """
-    max_altitude = 20  # 最大高度を10mに制限
-    clearance_z = z    # 初期高度を指定されたz値に設定
-    
-    # LiDARデータを取得
-    lidarData = client.getLidarData()
-    
-    if not lidarData.point_cloud:
-        print("\tNo points received from LiDAR. Moving to target position.")
-        # LiDARがデータを返さない場合、指定位置に移動
-        client.moveToPosition(x, y, clearance_z, speed)
-        pass
-    
-    # LiDARデータを (x, y, z) に整形
-    points = numpy.array(lidarData.point_cloud).reshape(-1, 3)
-    distances = numpy.sqrt(points[:, 0]**2 + points[:, 1]**2 + points[:, 2]**2)  # 各点の距離を計算
-    
-    # 距離が7m未満の障害物を検出
-    close_obstacles = distances[distances<7.0]
-
-    #print(close_obstacles)
-    
-    if len(close_obstacles) > 0:
-        print(f"Obstacle detected: {len(close_obstacles)} points within 7m.")
-        
-        # 高度を5mずつ上げて回避する。ただし、最大高度を超えないようにする
-        if clearance_z < max_altitude:
-            point = debug_pos(client)
-            clearance_z = point['z'] + 5
-            print(f"Raising altitude to avoid obstacle: {clearance_z}")
-            client.moveToPosition(point['x'], point['y'], clearance_z, speed)
-            moveToDestination(client,x,y,clearance_z,speed)
-        else:
-            print("Reached maximum altitude.")
-    else:
-        print("No close obstacles detected. Moving to target position.")
-        client.moveToPosition(x, y, clearance_z, speed)
+        print(f"Obstacle detected: {len(close_obstacles)} points within 9m.")
+        axis = [0.0, 0.0, 0.0, 0.0]
+    #else:
+        #print("No close obstacles detected. Moving to target position.")
+    return axis
 
 def parse_lidarData(data):
     #reshape array of floats to array of[X,Y,Z]
@@ -108,6 +64,7 @@ def parse_lidarData(data):
     points = numpy.reshape(points, (int(points.shape[0]/3),3))
     return points
 
+#ドローンの起動、停止
 def motor_onoff(client):
     data = client.getGameJoystickData()
     data['button'] = list(data['button'])
@@ -117,6 +74,7 @@ def motor_onoff(client):
     data['button'][0] = False
     client.putGameJoystickData(data)
 
+#ドローンの移動指示
 def drone_control(client,axis):
     data = client.getGameJoystickData()
     data['axis'] = list(data['axis'])
@@ -124,49 +82,28 @@ def drone_control(client,axis):
     client.putGameJoystickData(data)
     return data
 
-def drone_angle(client,dist):
-    drone_pos = debug_pos(client)
-    angle = calculate_angle(drone_pos['x'],drone_pos['y'],dist['x'],dist['y'])
-    if angle > 170:
-        while(not(angle-10 < drone_pos['yaw'] < -180+(angle-170))):
-            pass
-    return 0
-
-def calculate_angle(current_x, current_y, target_x, target_y):
-    """
-    現在位置と目標位置から、目標に正対するための角度を計算する。
-    
-    :param current_x: 現在のx座標
-    :param current_y: 現在のy座標
-    :param target_x: 目標のx座標
-    :param target_y: 目標のy座標
-    :return: 目標への角度（ラジアン）
-    """
-    # x, yの差分を計算
-    delta_x = target_x - current_x
-    delta_y = target_y - current_y
-    
-    # atan2で角度を計算
-    angle = math.atan2(delta_y, delta_x)
-    angle_in_degrees = math.degrees(angle)
-    return angle_in_degrees*-1
-
-def calculate_axis(current_x, current_y, target_x, target_y, weight=1):
+#ドローンの航行する方向を現在地と目的地から算出、weightで速度指定(1が最大、2,3と増えるごとに遅くなる)
+def calculate_axis(current_x, current_y, target_x, target_y, weight=1.5):
     delta_x = target_x - current_x
     delta_y = target_y - current_y
     bigger = max(abs(delta_x),abs(delta_y))
-    if (bigger!=delta_x)and(bigger!=delta_y):
-        bigger = -1
-    print("delta_y = ",delta_y,"delta_x = ",delta_x)
-    #bigger *= weight
-    l_r = -(delta_y/bigger)
-    f_b = -(delta_x/bigger)
-    print(l_r,",",f_b)
-    if (abs(delta_y) < 1)and(abs(delta_x) < 1):
+    
+    if bigger == 0:
+        bigger = 1
+    #print("delta_y = ",delta_y,"delta_x = ",delta_x)
+    bigger *= weight
+    l_r = delta_y / bigger
+    f_b = delta_x / bigger
+    if (delta_y < 0)and(l_r < 0)or(delta_y >= 0)and(l_r >= 0): 
+        l_r *= -1
+    if (delta_x < 0)and(f_b < 0)or(delta_x >= 0)and(f_b >= 0): 
+        f_b *= -1
+    #print(l_r,",",f_b)
+    if (abs(delta_y) < 2)and(abs(delta_x) < 2):
         axis = [0.0, 0.0, 0.0, 0.0]
     else :
         axis = [0.0, 0.0, l_r, f_b]
-    print("axis = ",axis)
+    #print("axis = ",axis)
     return axis
 
 # キーボード操作
@@ -252,54 +189,25 @@ def main():
 
     # 箱庭ドローンを走査するためのクライアントとオブジェクトを取得
     client = hakosim.MultirotorClient(sys.argv[1])
-    #pygame.init()
     # クライアントオブジェクトの初期化
     client.confirmConnection()
     client.enableApiControl(True)
     client.armDisarm(True)
     # 離陸
-    # 左回りに0~180,-180~0
-    #client.takeoff(3)
 
-    keyboard_control(client)
-    #'''
+    #keyboard_control(client)
+
+    #''' ドローン起動、takeoffまで
     motor_onoff(client)
     drone_control(client,[0.0, -1.0, 0.0, 0.0])
     time.sleep(1)
     drone_control(client,[0.0, 0.0, 0.0, 0.0])
     #'''
 
-    dist = destination(index=2)
-    drone_pos = debug_pos(client)
-    axis = calculate_axis(round(drone_pos['x'],3),round(drone_pos['y'],3),dist['x'],dist['y'])
-    flag = True
-    while flag:
-        if axis != [0.0, 0.0, 0.0, 0.0]:
-            drone_pos = debug_pos(client)
-            axis = calculate_axis(round(drone_pos['x'],3),round(drone_pos['y'],3),dist['x'],dist['y'])
-            drone_control(client,axis)
-            time.sleep(1)
-        else: flag = False
-    time.sleep(5)
-    drone_pos = debug_pos(client)
-    delta_x = round(drone_pos['x'],3) - dist['x']
-    delta_y = round(drone_pos['y'],3) - dist['y']
-    print("誤差:x=",delta_x,",y=",delta_y)
+    dist = destination(index=0)
+    fly_to_destination(client, dist)
 
-    flag = True
-    axis = calculate_axis(round(drone_pos['x'],3),round(drone_pos['y'],3),dist['x'],dist['y'])
-    while flag:
-        if axis != [0.0, 0.0, 0.0, 0.0]:
-            drone_pos = debug_pos(client)
-            axis = calculate_axis(round(drone_pos['x'],3),round(drone_pos['y'],3),dist['x'],dist['y'])
-            drone_control(client,axis)
-            time.sleep(1)
-        else: flag = False
-    time.sleep(5)
-    drone_pos = debug_pos(client)
-    delta_x = round(drone_pos['x'],3) - dist['x']
-    delta_y = round(drone_pos['y'],3) - dist['y']
-    print("誤差:x=",delta_x,",y=",delta_y)
+    fly_to_destination(client, destination(index=3))
 
     #angle = calculate_angle(desti['x'],desti['y'],dist3['x'],dist3['y'])
     
