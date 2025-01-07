@@ -29,7 +29,7 @@ def fly_to_destination(client,dist):
     while axis != [0.0, 0.0, 0.0, 0.0]:
         drone_pos = debug_pos(client)
         axis = calculate_axis(round(drone_pos['x'],3),round(drone_pos['y'],3),dist['x'],dist['y'])
-        axis = avoidance(client,axis)
+        avoidance(client,axis)
         drone_control(client,axis)
         #time.sleep(1)
     time.sleep(5)
@@ -40,23 +40,34 @@ def fly_to_destination(client,dist):
 
 # 障害物回避
 def avoidance(client,axis):
-    
+    axis = [x * -1 for x in axis]
+    while obstacle_detection(client):
+        drone_control(client,axis)
+        time.sleep(2)
+        drone_control(client,[0.0, -1.0, 0.0, 0.0])
+        time.sleep(1)
+    return True
+
+# 障害物検出
+def obstacle_detection(client):
     lidarData = client.getLidarData()
     #if (len(lidarData.point_cloud)<3):
     #    print("NO")
     #else:
         #print(f"len: {len(lidarData.point_cloud)}")
+    
     points = parse_lidarData(lidarData)
     #print("\tReading:time_stamp: %d number_of_points: %d"% (lidarData.time_stamp, len(points)))
     #print(points)
+
     distances = numpy.sqrt(points[:, 0]**2 + points[:, 1]**2 + points[:, 2]**2)  # 各点の距離を計算
     close_obstacles = distances[distances<9.0]
     if len(close_obstacles) > 0:
         print(f"Obstacle detected: {len(close_obstacles)} points within 9m.")
-        axis = [0.0, 0.0, 0.0, 0.0]
-    #else:
-        #print("No close obstacles detected. Moving to target position.")
-    return axis
+        return True
+    else: 
+        print("none")
+        return False
 
 def parse_lidarData(data):
     #reshape array of floats to array of[X,Y,Z]
