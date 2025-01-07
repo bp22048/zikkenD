@@ -29,6 +29,7 @@ def fly_to_destination(client,dist):
     while axis != [0.0, 0.0, 0.0, 0.0]:
         drone_pos = debug_pos(client)
         axis = calculate_axis(round(drone_pos['x'],3),round(drone_pos['y'],3),dist['x'],dist['y'])
+        drone_angle(client,dist,axis)
         avoidance(client,axis)
         drone_control(client,axis)
         #time.sleep(1)
@@ -37,6 +38,7 @@ def fly_to_destination(client,dist):
     delta_x = round(drone_pos['x'],3) - dist['x']
     delta_y = round(drone_pos['y'],3) - dist['y']
     print("誤差:x=",delta_x,",y=",delta_y)
+    keyboard_control(client)
 
 # 障害物回避
 def avoidance(client,axis):
@@ -66,7 +68,7 @@ def obstacle_detection(client):
         print(f"Obstacle detected: {len(close_obstacles)} points within 9m.")
         return True
     else: 
-        print("none")
+        #print("none")
         return False
 
 def parse_lidarData(data):
@@ -116,6 +118,41 @@ def calculate_axis(current_x, current_y, target_x, target_y, weight=1.5):
         axis = [0.0, 0.0, l_r, f_b]
     #print("axis = ",axis)
     return axis
+
+def drone_angle(client,dist,axis):
+    drone_pos = debug_pos(client)
+    yaw = drone_pos['yaw']+180
+    angle = calculate_angle(drone_pos['x'],drone_pos['y'],dist['x'],dist['y'])+180
+    #print("目標値：",angle)
+
+    while(not(angle-10 < yaw < angle+10)):
+        drone_pos = debug_pos(client)
+        yaw = drone_pos['yaw']+180
+        if yaw < angle:
+            drone_control(client,[-1.0, 0.0, axis[2]*0.5, axis[3]*0.5])
+        else: drone_control(client,[1.0, 0.0, axis[2]*0.5, axis[3]*0.5])
+        
+    drone_pos = debug_pos(client)
+    #print("実測値",drone_pos['yaw']+180)
+
+def calculate_angle(current_x, current_y, target_x, target_y):
+    """
+    現在位置と目標位置から、目標に正対するための角度を計算する。
+    
+    :param current_x: 現在のx座標
+    :param current_y: 現在のy座標
+    :param target_x: 目標のx座標
+    :param target_y: 目標のy座標
+    :return: 目標への角度（ラジアン）
+    """
+    # x, yの差分を計算
+    delta_x = target_x - current_x
+    delta_y = target_y - current_y
+    
+    # atan2で角度を計算
+    angle = math.atan2(delta_y, delta_x)
+    angle_in_degrees = math.degrees(angle)
+    return angle_in_degrees
 
 # キーボード操作
 def keyboard_control(client: hakosim.MultirotorClient): 
@@ -215,8 +252,9 @@ def main():
     drone_control(client,[0.0, 0.0, 0.0, 0.0])
     #'''
 
-    dist = destination(index=0)
-    fly_to_destination(client, dist)
+    fly_to_destination(client, destination(index=2))
+
+    fly_to_destination(client, destination(index=0))
 
     fly_to_destination(client, destination(index=3))
 
@@ -225,17 +263,6 @@ def main():
     #client.moveToPosition(dist3['x'],dist3['y'],dist3['z'],3)
 
     print("end")
-    
-    lidarData = client.getLidarData()
-    if (len(lidarData.point_cloud)<3):
-        print("NO")
-    else:
-        print(f"len: {len(lidarData.point_cloud)}")
-    points = parse_lidarData(lidarData)
-    print("\tReading:time_stamp: %d number_of_points: %d"% (lidarData.time_stamp, len(points)))
-       
-
-    
 
     # 目的地1まで移動
     dest1 = destination(index=0)
