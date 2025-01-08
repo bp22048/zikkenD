@@ -53,7 +53,7 @@ def fly_to_destination(client,dist):
     delta_x = round(drone_pos['x'],3) - dist['x']
     delta_y = round(drone_pos['y'],3) - dist['y']
     print("誤差:x=",delta_x,",y=",delta_y)
-    keyboard_control(client)
+    #keyboard_control(client)
 
 # 障害物回避
 def avoidance(client,axis):
@@ -164,7 +164,8 @@ def drone_angle(client,dist,axis):
         if yaw < angle:
             drone_control(client,[-1.0, 0.0, axis[2]*0.5, axis[3]*0.5])
         else: drone_control(client,[1.0, 0.0, axis[2]*0.5, axis[3]*0.5])
-        
+
+    drone_control(client,[0.0, 0.0, axis[2], axis[3]])    
     drone_pos = debug_pos(client)
     #print("実測値",drone_pos['yaw']+180)
 
@@ -248,6 +249,8 @@ def keyboard_control(client: hakosim.MultirotorClient):
                         print(points)
                         distances = numpy.sqrt(points[:, 0]**2 + points[:, 1]**2 + points[:, 2]**2)  # 各点の距離を計算
                         print(distances)
+                    if event.key == K_1:
+                        show_drone_pos(client)
                     if event.key == K_f:
                         pygame.quit()
                         return 0
@@ -269,6 +272,14 @@ def debug_pos(client):
     destination = {'x': pose.position.x_val, 'y': pose.position.y_val, 'z': pose.position.z_val, 'yaw': math.degrees(yaw)}
     return destination
 
+def show_drone_pos(client):
+    pose = client.simGetVehiclePose()
+    print(f"POS : {pose.position.x_val} {pose.position.y_val} {pose.position.z_val}")
+    roll, pitch, yaw = hakosim.hakosim_types.Quaternionr.quaternion_to_euler(pose.orientation)
+    print(f"ANGLE: {math.degrees(roll)} {math.degrees(pitch)} {math.degrees(yaw)}")
+    #destination = {'x': pose.position.x_val, 'y': pose.position.y_val, 'z': pose.position.z_val, 'yaw': math.degrees(yaw)}
+    #return destination
+
 # プログラムのメイン処理
 def main():
     # 引数チェック
@@ -284,7 +295,7 @@ def main():
     client.armDisarm(True)
     # 離陸
 
-    #keyboard_control(client)
+    keyboard_control(client)
 
     #''' ドローン起動、takeoffまで
     motor_onoff(client)
