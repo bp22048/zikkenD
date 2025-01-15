@@ -188,10 +188,21 @@ def calculate_angle(current_x, current_y, target_x, target_y):
     angle_in_degrees = math.degrees(angle)
     return angle_in_degrees
 
+def keyboard_control_cal(client):
+    pose = client.simGetVehiclePose()
+    roll, pitch, yaw = hakosim.hakosim_types.Quaternionr.quaternion_to_euler(pose.orientation)
+    n_s = -math.sin(yaw)
+    e_w = -math.cos(yaw)
+    bigger = max(abs(n_s),abs(e_w))
+    if bigger == 0:
+        bigger = 1
+    return n_s/bigger , e_w/bigger
+
 def keyboard_control(client: hakosim.MultirotorClient): 
     '''
     キーボード操作(起動すると出てくる謎の小さいwindowをクリックしてからじゃないと動かない)
 
+    ドローン起動       : eキー
     上昇              : PageUp
     下降              : PageDown
     旋回              : Left,Right
@@ -212,32 +223,36 @@ def keyboard_control(client: hakosim.MultirotorClient):
                         motor_onoff(client)
                     if event.key == K_w:
                         print("front")
-                        data = drone_control(client,[0.0, 0.0, 0.0, -1.0])
+                        third, fourth = keyboard_control_cal(client)
+                        drone_control(client,[0.0, 0.0, third, fourth])
                     if event.key == K_s:
                         print("back")
-                        data = drone_control(client,[0.0, 0.0, 0.0, 1.0])
+                        third, fourth = keyboard_control_cal(client)
+                        drone_control(client,[0.0, 0.0, -third, -fourth])
                     if event.key == K_a:
                         print("left")
-                        data = drone_control(client,[0.0, 0.0, -1.0, 0.0])
+                        fourth, third = keyboard_control_cal(client)
+                        drone_control(client,[0.0, 0.0, third, -fourth])
                     if event.key == K_d:
                         print("right")
-                        data = drone_control(client,[0.0, 0.0, 1.0, 0.0])
+                        fourth, third = keyboard_control_cal(client)
+                        drone_control(client,[0.0, 0.0, -third, fourth])
                     # up down
                     if event.key == K_UP:
                         print("up")
-                        data = drone_control(client,[0.0, -1.0, 0.0, 0.0])
+                        drone_control(client,[0.0, -1.0, 0.0, 0.0])
                     if event.key == K_DOWN:
                         print("down")
-                        data = drone_control(client,[0.0, 1.0, 0.0, 0.0])
+                        drone_control(client,[0.0, 1.0, 0.0, 0.0])
                     if event.key == K_b:
                         print("stop")
-                        data = drone_control(client,[0.0, 0.0, 0.0, 0.0])
+                        drone_control(client,[0.0, 0.0, 0.0, 0.0])
                     if event.key == K_LEFT:
                         print("yaw_left")
-                        data = drone_control(client,[-1.0, 0.0, 0.0, 0.0])
+                        drone_control(client,[-1.0, 0.0, 0.0, 0.0])
                     if event.key == K_RIGHT:
                         print("yaw_right")
-                        data = drone_control(client,[1.0, 0.0, 0.0, 0.0])
+                        drone_control(client,[1.0, 0.0, 0.0, 0.0])
                     if event.key == K_x:
                         lidarData = client.getLidarData()
                         if (len(lidarData.point_cloud)<3):
