@@ -7,6 +7,7 @@ import pprint
 import pygame
 from pygame.locals import *
 
+
 '''
 axisについて
 ドローンをコントローラ操作する時に使用している1次元4要素の配列
@@ -276,16 +277,20 @@ def keyboard_control(client: hakosim.MultirotorClient):
             
     except KeyboardInterrupt:
         pygame.quit()
-    return 0
+        
+        return 0
 
 # デバッグ用: ドローンの現在位置と姿勢を表示
 def debug_pos(client):
     pose = client.simGetVehiclePose()
+
     #print(f"POS : {pose.position.x_val} {pose.position.y_val} {pose.position.z_val}")
+
     roll, pitch, yaw = hakosim.hakosim_types.Quaternionr.quaternion_to_euler(pose.orientation)
     #print(f"ANGLE: {math.degrees(roll)} {math.degrees(pitch)} {math.degrees(yaw)}")
     destination = {'x': pose.position.x_val, 'y': pose.position.y_val, 'z': pose.position.z_val, 'yaw': math.degrees(yaw)}
     return destination
+
 
 def show_drone_pos(client):
     pose = client.simGetVehiclePose()
@@ -294,6 +299,7 @@ def show_drone_pos(client):
     print(f"ANGLE: {math.degrees(roll)} {math.degrees(pitch)} {math.degrees(yaw)}")
     #destination = {'x': pose.position.x_val, 'y': pose.position.y_val, 'z': pose.position.z_val, 'yaw': math.degrees(yaw)}
     #return destination
+
 
 # プログラムのメイン処理
 def main():
@@ -304,10 +310,12 @@ def main():
 
     # 箱庭ドローンを走査するためのクライアントとオブジェクトを取得
     client = hakosim.MultirotorClient(sys.argv[1])
+
     # クライアントオブジェクトの初期化
     client.confirmConnection()
     client.enableApiControl(True)
     client.armDisarm(True)
+
     # 離陸
 
     keyboard_control(client)
@@ -327,7 +335,10 @@ def main():
 
     print("end")
 
+
     return 0
 
 if __name__ == "__main__":
+
     sys.exit(main())
+
